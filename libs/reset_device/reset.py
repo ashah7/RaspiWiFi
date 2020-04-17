@@ -1,37 +1,46 @@
-import RPi.GPIO as GPIO
+#import RPi.GPIO as GPIO
 import os
 import time
 import subprocess
 import reset_lib
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+#GPIO.setmode(GPIO.BCM)
+#GPIO.setup(18, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
-counter = 0
-serial_last_four = subprocess.check_output(['cat', '/proc/cpuinfo'])[-5:-1].decode('utf-8')
+#counter = 0
+#serial_last_four = subprocess.check_output(['cat', '/proc/cpuinfo'])[-5:-1].decode('utf-8')
+
+serial_last_four = subprocess.getoutput("cat /proc/cpuinfo | grep Serial | awk '{print $3}'")[-4:]  #amended here use this to get serial last 4 (will automatically check and reboot if no match
+print(serial_last_four)
+
 config_hash = reset_lib.config_file_hash()
+#print(config_hash)
 ssid_prefix = config_hash['ssid_prefix'] + " "
-hostapd_reset_required = reset_lib.hostapd_reset_check(ssid_prefix)
+print(ssid_prefix)
+reboot_required = False
 
+reboot_required = reset_lib.wpa_check_activate(config_hash['wpa_enabled'], config_hash['wpa_key'])
 
-if hostapd_reset_required == True:
-    reset_lib.update_hostapd(ssid_prefix, serial_last_four)
+reboot_required = reset_lib.update_ssid(ssid_prefix, serial_last_four)
+print(reboot_required)
+
+if reboot_required == True:
     os.system('reboot')
 
 # This is the main logic loop waiting for a button to be pressed on GPIO 18 for 10 seconds.
 # If that happens the device will reset to its AP Host mode allowing for reconfiguration on a new network.
-while True:
-    while GPIO.input(18) == 1:
-        time.sleep(1)
-        counter = counter + 1
+#while True:
+#    while GPIO.input(18) == 1:
+#        time.sleep(1)
+#        counter = counter + 1
 
-        print(counter)
+#        print(counter)
 
-        if counter == 9:
-            reset_lib.reset_to_host_mode()
+#        if counter == 9:
+#            reset_lib.reset_to_host_mode()
 
-        if GPIO.input(18) == 0:
-            counter = 0
-            break
+#        if GPIO.input(18) == 0:
+#            counter = 0
+#            break
 
-    time.sleep(1)
+#   time.sleep(1)
